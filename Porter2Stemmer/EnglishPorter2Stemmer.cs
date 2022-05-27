@@ -9,7 +9,6 @@ namespace Porter2Stemmer
     /// </summary>
     public class EnglishPorter2Stemmer : IPorter2Stemmer
     {
-        
         private readonly char[] _alphabet = 
             Enumerable
                 .Range('a', 'z' - 'a' + 1)
@@ -17,19 +16,19 @@ namespace Porter2Stemmer
                 .Concat(new[]{'\''}).ToArray();
         public char[] Alphabet { get { return _alphabet; } }
 
-        private readonly char[] _vowels = "aeiouy".ToArray();
-        public char[] Vowels { get { return _vowels; } }
+        private static readonly HashSet<char> _vowels = new HashSet<char> { 'a', 'e', 'i', 'o', 'u', 'y' };
+        public HashSet<char> Vowels { get { return _vowels; } }
 
-        private readonly string[] _doubles = 
+        private static readonly string[] _doubles = 
             { "bb", "dd", "ff", "gg", "mm", "nn", "pp", "rr", "tt" };
         public string[] Doubles { get { return _doubles; } }
 
-        private readonly char[] _liEndings = "cdeghkmnrt".ToArray();
-        public char[] LiEndings { get { return _liEndings; } }
+        private static readonly HashSet<char> _liEndings = new HashSet<char> { 'c', 'd', 'e', 'g', 'h', 'k', 'm', 'n', 'r', 't' };
+        public HashSet<char> LiEndings { get { return _liEndings; } }
 
-        private readonly char[] _nonShortConsonants = "wxY".ToArray();
+        private static readonly char[] _nonShortConsonants = "wxY".ToArray();
 
-        private readonly Dictionary<string, string> _exceptions = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> _exceptions = new Dictionary<string, string>
             {
                 {"skis", "ski"},
                 {"skies", "sky"},
@@ -51,16 +50,66 @@ namespace Porter2Stemmer
                 {"andes", "andes"}
             };
 
-        private readonly string[] _exceptionsPart2 = new[]
+        private static readonly HashSet<string> _exceptionsPart2 = new HashSet<string>
             {
                 "inning", "outing", "canning", "herring", "earring",
                 "proceed", "exceed", "succeed"
             };
 
-        private readonly string[] _exceptionsRegion1 = new[]
+        private static readonly HashSet<string> _exceptionsRegion1 = new HashSet<string>
             {
                 "gener", "arsen", "commun"
             };
+
+        private static string[] _lySuffixes1 = new[] { "eedly", "eed" };
+        private static string[] _lySuffixes2 = new[] { "ed", "edly", "ing", "ingly" };
+        private static string[] _lySuffixes3 = new[] { "at", "bl", "iz" };
+        private static Dictionary<string, string> _step2Suffixes = new Dictionary<string, string>
+                {
+                    {"ization", "ize"},
+                    {"ational", "ate"},
+                    {"ousness", "ous"},
+                    {"iveness", "ive"},
+                    {"fulness", "ful"},
+                    {"tional", "tion"},
+                    {"lessli", "less"},
+                    {"biliti", "ble"},
+                    {"entli", "ent"},
+                    {"ation", "ate"},
+                    {"alism", "al"},
+                    {"aliti", "al"},
+                    {"fulli", "ful"},
+                    {"ousli", "ous"},
+                    {"iviti", "ive"},
+                    {"enci", "ence"},
+                    {"anci", "ance"},
+                    {"abli", "able"},
+                    {"izer", "ize"},
+                    {"ator", "ate"},
+                    {"alli", "al"},
+                    {"bli", "ble"}
+                };
+
+        private static Dictionary<string, string> _step3Suffixes = new Dictionary<string, string>
+                {
+                    {"ational", "ate"},
+                    {"tional", "tion"},
+                    {"alize", "al"},
+                    {"icate", "ic"},
+                    {"iciti", "ic"},
+                    {"ical", "ic"},
+                    {"ful", null},
+                    {"ness", null}
+                };
+        private static string[] _step4Suffixes = new[]
+                            {
+                    "al", "ance", "ence", "er", "ic", "able", "ible", "ant",
+                    "ement", "ment", "ent", "ism", "ate", "iti", "ous",
+                    "ive", "ize"
+                };
+
+        // Ordered from longest to shortest
+        private static string[] _step0Suffixes = new[] { "'s'", "'s", "'" };
 
         public StemmedWord Stem(string word)
         {
@@ -81,7 +130,7 @@ namespace Porter2Stemmer
             word = MarkYsAsConsonants(word);
 
             var r1 = GetRegion1(word);
-            var r2 = GetRegion2(word);
+            var r2 = GetRegion2(word, r1);
 
             word = Step0RemoveSPluralSuffix(word);
             word = Step1ARemoveOtherSPluralSuffixes(word);
@@ -179,11 +228,16 @@ namespace Porter2Stemmer
         /// R2 is the region after the first non-vowel following a vowel in R1, or the end of the word if there is no such non-vowel. 
         /// </summary>
         /// <param name="word"></param>
+        /// <param name="r1"></param>
         /// <returns></returns>
-        public int GetRegion2(string word)
+        public int GetRegion2(string word, int? r1 = null)
         {
-            var r1 = GetRegion1(word);
-            return GetRegion(word, r1);
+            if(r1 == null)
+            {
+                r1 = GetRegion1(word);
+            }
+
+            return GetRegion(word, r1.Value);
         }
 
         private int GetRegion(string word, int begin)
@@ -268,9 +322,7 @@ namespace Porter2Stemmer
 
         public string Step0RemoveSPluralSuffix(string word)
         {
-            // Ordered from longest to shortest
-            var suffixes = new[] {"'s'", "'s", "'"};
-            foreach (var suffix in suffixes)
+            foreach (var suffix in _step0Suffixes)
             {
                 if (word.EndsWithOrdinal(suffix))
                 {
@@ -320,7 +372,7 @@ namespace Porter2Stemmer
 
         public string Step1BRemoveLySuffixes(string word, int r1)
         {
-            foreach (var suffix in new [] {"eedly", "eed"}.Where(word.EndsWithOrdinal))
+            foreach (var suffix in _lySuffixes1.Where(word.EndsWithOrdinal))
             {
                 if(SuffixInR1(word, r1, suffix))
                 {
@@ -329,25 +381,29 @@ namespace Porter2Stemmer
                 return word;
             }
 
-            foreach (var suffix in new [] {"ed", "edly", "ing", "ingly"}.Where(word.EndsWithOrdinal))
+            foreach (var suffix in _lySuffixes2.Where(word.EndsWithOrdinal))
             {
                 var trunc = ReplaceSuffix(word, suffix);//word.Substring(0, word.Length - suffix.Length);
                 if (trunc.Any(IsVowel))
-                {
-                    if (new[] {"at", "bl", "iz"}.Any(trunc.EndsWithOrdinal))
+                {   
+                    if (_lySuffixes3.Any(trunc.EndsWithOrdinal))
                     {
                         return trunc + "e";
                     }
+
                     if (Doubles.Any(trunc.EndsWithOrdinal))
                     {
                         return trunc.Substring(0, trunc.Length - 1);
                     }
+
                     if (IsShortWord(trunc))
                     {
                         return trunc + "e";
                     }
+
                     return trunc;
                 }
+
                 return word;
             }
 
@@ -367,32 +423,7 @@ namespace Porter2Stemmer
 
         public string Step2ReplaceSuffixes(string word, int r1)
         {
-            var suffixes = new Dictionary<string, string>
-                {
-                    {"ization", "ize"},
-                    {"ational", "ate"},
-                    {"ousness", "ous"},
-                    {"iveness", "ive"},
-                    {"fulness", "ful"},
-                    {"tional", "tion"},
-                    {"lessli", "less"},
-                    {"biliti", "ble"},
-                    {"entli", "ent"},
-                    {"ation", "ate"},
-                    {"alism", "al"},
-                    {"aliti", "al"},
-                    {"fulli", "ful"},
-                    {"ousli", "ous"},
-                    {"iviti", "ive"},
-                    {"enci", "ence"},
-                    {"anci", "ance"},
-                    {"abli", "able"},
-                    {"izer", "ize"},
-                    {"ator", "ate"},
-                    {"alli", "al"},
-                    {"bli", "ble"}
-                };
-            foreach (var suffix in suffixes)
+            foreach (var suffix in _step2Suffixes)
             {
                 if (word.EndsWithOrdinal(suffix.Key))
                 {
@@ -426,18 +457,7 @@ namespace Porter2Stemmer
 
         public string Step3ReplaceSuffixes(string word, int r1, int r2)
         {
-            var suffixes = new Dictionary<string, string>
-                {
-                    {"ational", "ate"},
-                    {"tional", "tion"},
-                    {"alize", "al"},
-                    {"icate", "ic"},
-                    {"iciti", "ic"},
-                    {"ical", "ic"},
-                    {"ful", null},
-                    {"ness", null}
-                };
-            foreach (var suffix in suffixes.Where(s => word.EndsWithOrdinal(s.Key)))
+            foreach (var suffix in _step3Suffixes.Where(s => word.EndsWithOrdinal(s.Key)))
             {
                 string final;
                 if (SuffixInR1(word, r1, suffix.Key)
@@ -460,12 +480,7 @@ namespace Porter2Stemmer
 
         public string Step4RemoveSomeSuffixesInR2(string word, int r2)
         {
-            foreach (var suffix in new[]
-                {
-                    "al", "ance", "ence", "er", "ic", "able", "ible", "ant", 
-                    "ement", "ment", "ent", "ism", "ate", "iti", "ous", 
-                    "ive", "ize"
-                })
+            foreach (var suffix in _step4Suffixes)
             {
                 if (word.EndsWithOrdinal(suffix))
                 {
@@ -473,6 +488,7 @@ namespace Porter2Stemmer
                     {
                         return ReplaceSuffix(word, suffix);
                     }
+
                     return word;
                 }
             }

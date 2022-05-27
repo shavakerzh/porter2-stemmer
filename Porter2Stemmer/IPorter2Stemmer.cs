@@ -1,4 +1,6 @@
 ﻿
+using System.Collections.Generic;
+
 namespace Porter2Stemmer
 {
     public interface IPorter2Stemmer : IStemmer
@@ -6,7 +8,7 @@ namespace Porter2Stemmer
         /// <summary>
         /// Vowel characters used for stemming.
         /// </summary>
-        char[] Vowels { get; }
+        HashSet<char> Vowels { get; }
 
         /// <summary>
         /// Valid doubled letters used for stemming.
@@ -16,7 +18,7 @@ namespace Porter2Stemmer
         /// <summary>
         /// Li- endings used for stemming.
         /// </summary>
-        char[] LiEndings { get; }
+        HashSet<char> LiEndings { get; }
 
         /// <summary>
         /// R1 is the region after the first non-vowel following a vowel, 
@@ -29,6 +31,6 @@ namespace Porter2Stemmer
         /// R2 is the region after the first non-vowel following a vowel in 
         /// R1, or the end of the word if there is no such non-vowel.
         /// </summary>
-        int GetRegion2(string word);
+        int GetRegion2(string word, int? r1 = null);
     }
 }
