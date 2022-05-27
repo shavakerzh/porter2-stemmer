@@ -153,7 +153,7 @@ namespace Porter2Stemmer
         /// <returns></returns>
         private static string TrimStartingApostrophe(string word)
         {
-            if (word.StartsWith("'"))
+            if (word.StartsWithOrdinal("'"))
             {
                 word = word.Substring(1);
             }
@@ -168,7 +168,7 @@ namespace Porter2Stemmer
         public int GetRegion1(string word)
         {
             // Exceptional forms
-            foreach (var except in _exceptionsRegion1.Where(word.StartsWith))
+            foreach (var except in _exceptionsRegion1.Where(word.StartsWithOrdinal))
             {
                 return except.Length;
             }
@@ -272,7 +272,7 @@ namespace Porter2Stemmer
             var suffixes = new[] {"'s'", "'s", "'"};
             foreach (var suffix in suffixes)
             {
-                if (word.EndsWith(suffix))
+                if (word.EndsWithOrdinal(suffix))
                 {
                     return ReplaceSuffix(word, suffix);
                 }
@@ -282,11 +282,11 @@ namespace Porter2Stemmer
 
         public string Step1ARemoveOtherSPluralSuffixes(string word)
         {
-            if (word.EndsWith("sses"))
+            if (word.EndsWithOrdinal("sses"))
             {
                 return ReplaceSuffix(word, "sses", "ss");
             }
-            if (word.EndsWith("ied") || word.EndsWith("ies"))
+            if (word.EndsWithOrdinal("ied") || word.EndsWithOrdinal("ies"))
             {
                 var restOfWord = word.Substring(0, word.Length - 3);
                 if (word.Length > 4)
@@ -295,11 +295,11 @@ namespace Porter2Stemmer
                 }
                 return restOfWord + "ie";
             }
-            if (word.EndsWith("us") || word.EndsWith("ss"))
+            if (word.EndsWithOrdinal("us") || word.EndsWithOrdinal("ss"))
             {
                 return word;
             }
-            if (word.EndsWith("s"))
+            if (word.EndsWithOrdinal("s"))
             {
                 if (word.Length < 3)
                 {
@@ -320,7 +320,7 @@ namespace Porter2Stemmer
 
         public string Step1BRemoveLySuffixes(string word, int r1)
         {
-            foreach (var suffix in new [] {"eedly", "eed"}.Where(word.EndsWith))
+            foreach (var suffix in new [] {"eedly", "eed"}.Where(word.EndsWithOrdinal))
             {
                 if(SuffixInR1(word, r1, suffix))
                 {
@@ -329,16 +329,16 @@ namespace Porter2Stemmer
                 return word;
             }
 
-            foreach (var suffix in new [] {"ed", "edly", "ing", "ingly"}.Where(word.EndsWith))
+            foreach (var suffix in new [] {"ed", "edly", "ing", "ingly"}.Where(word.EndsWithOrdinal))
             {
                 var trunc = ReplaceSuffix(word, suffix);//word.Substring(0, word.Length - suffix.Length);
                 if (trunc.Any(IsVowel))
                 {
-                    if (new[] {"at", "bl", "iz"}.Any(trunc.EndsWith))
+                    if (new[] {"at", "bl", "iz"}.Any(trunc.EndsWithOrdinal))
                     {
                         return trunc + "e";
                     }
-                    if (Doubles.Any(trunc.EndsWith))
+                    if (Doubles.Any(trunc.EndsWithOrdinal))
                     {
                         return trunc.Substring(0, trunc.Length - 1);
                     }
@@ -356,7 +356,7 @@ namespace Porter2Stemmer
 
         public string Step1CReplaceSuffixYWithIIfPreceededWithConsonant(string word)
         {
-            if ((word.EndsWith("y") || word.EndsWith("Y"))
+            if ((word.EndsWithOrdinal("y") || word.EndsWithOrdinal("Y"))
                 && word.Length > 2
                 && IsConsonant(word[word.Length - 2]))
             {
@@ -394,7 +394,7 @@ namespace Porter2Stemmer
                 };
             foreach (var suffix in suffixes)
             {
-                if (word.EndsWith(suffix.Key))
+                if (word.EndsWithOrdinal(suffix.Key))
                 {
                     string final;
                     if (SuffixInR1(word, r1, suffix.Key)
@@ -406,14 +406,14 @@ namespace Porter2Stemmer
                 }
             }
 
-            if (word.EndsWith("ogi") 
+            if (word.EndsWithOrdinal("ogi") 
                 && SuffixInR1(word, r1, "ogi") 
                 && word[word.Length - 4] == 'l')
             {
                 return ReplaceSuffix(word, "ogi", "og");
             }
 
-            if (word.EndsWith("li") & SuffixInR1(word, r1, "li"))
+            if (word.EndsWithOrdinal("li") & SuffixInR1(word, r1, "li"))
             {
                 if (LiEndings.Contains(word[word.Length - 3]))
                 {
@@ -437,7 +437,7 @@ namespace Porter2Stemmer
                     {"ful", null},
                     {"ness", null}
                 };
-            foreach (var suffix in suffixes.Where(s => word.EndsWith(s.Key)))
+            foreach (var suffix in suffixes.Where(s => word.EndsWithOrdinal(s.Key)))
             {
                 string final;
                 if (SuffixInR1(word, r1, suffix.Key)
@@ -447,7 +447,7 @@ namespace Porter2Stemmer
                 }
             }
 
-            if (word.EndsWith("ative"))
+            if (word.EndsWithOrdinal("ative"))
             {
                 if(SuffixInR1(word, r1, "ative") && SuffixInR2(word, r2, "ative"))
                 {
@@ -467,7 +467,7 @@ namespace Porter2Stemmer
                     "ive", "ize"
                 })
             {
-                if (word.EndsWith(suffix))
+                if (word.EndsWithOrdinal(suffix))
                 {
                     if (SuffixInR2(word, r2, suffix))
                     {
@@ -477,7 +477,7 @@ namespace Porter2Stemmer
                 }
             }
 
-            if (word.EndsWith("ion") && 
+            if (word.EndsWithOrdinal("ion") && 
                 SuffixInR2(word, r2, "ion") &&
                 new[] {'s', 't'}.Contains(word[word.Length - 4]))
             {
@@ -488,7 +488,7 @@ namespace Porter2Stemmer
 
         public string Step5RemoveEorLSuffixes(string word, int r1, int r2)
         {
-            if (word.EndsWith("e") &&
+            if (word.EndsWithOrdinal("e") &&
                 (SuffixInR2(word, r2, "e") ||
                     (SuffixInR1(word, r1, "e") && 
                         !EndsInShortSyllable(ReplaceSuffix(word, "e")))))
@@ -496,7 +496,7 @@ namespace Porter2Stemmer
                 return ReplaceSuffix(word, "e");
             }
 
-            if (word.EndsWith("l") && 
+            if (word.EndsWithOrdinal("l") && 
                 SuffixInR2(word, r2, "l") && 
                 word.Length > 1 &&
                 word[word.Length - 2] == 'l')
